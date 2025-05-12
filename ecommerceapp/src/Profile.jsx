@@ -19,4 +19,5 @@ const containerStyle = {
   margin: '20px auto'
 }
 
-export default withAuthenticator(Profile)
+const AuthenticatedProfile = withAuthenticator(Profile);
+export default AuthenticatedProfile;
