@@ -35,17 +35,21 @@ exports.handler = async (event, _context, callback) => {
 
     // First check to see if the group exists, and if not create the group
     try {
+      console.log('adding user to group');
       await cognitoIdentityServiceProvider.send(new GetGroupCommand(groupParams));
     } catch (e) {
+      console.log('Group does not exist, creating group');
       await cognitoIdentityServiceProvider.send(new CreateGroupCommand(groupParams));
     }
     // The user is an administrator, place them in the Admin group
     try {
       await cognitoIdentityServiceProvider.send(new AdminAddUserToGroupCommand(userParams));
-      callback(null, event);
-    } catch (e) { callback(e); }
+      //callback(null, event);
+    } catch (e) { 
+      //callback(e); 
+      console.error('Error adding user to admin group:', e);}
   } else {
     // If the user is in neither group, proceed with no action
-    callback(null, event)
+    //callback(null, event)
   }
 }

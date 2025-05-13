@@ -6,14 +6,13 @@ or in the "license" file accompanying this file. This file is distributed on an 
 See the License for the specific language governing permissions and limitations under the License.
 */
 
-
 /* Amplify Params - DO NOT EDIT
-	AUTH_ECOMMERCEAPP8149F03F_USERPOOLID
-	ENV
-	REGION
-	STORAGE_RODUCTTABLE_ARN
-	STORAGE_RODUCTTABLE_NAME
-	STORAGE_RODUCTTABLE_STREAMARN
+  AUTH_ECOMMERCEAPP8149F03F_USERPOOLID
+  ENV
+  REGION
+  STORAGE_RODUCTTABLE_ARN
+  STORAGE_RODUCTTABLE_NAME
+  STORAGE_RODUCTTABLE_STREAMARN
 Amplify Params - DO NOT EDIT */
 
 const express = require('express')
@@ -23,11 +22,8 @@ const awsServerlessExpressMiddleware = require('aws-serverless-express/middlewar
 const AWS = require('aws-sdk')
 const { v4: uuid } = require('uuid')
 
-
-
 /* Cognito SDK */
-const cognito = new
-AWS.CognitoIdentityServiceProvider({
+const cognito = new AWS.CognitoIdentityServiceProvider({
   apiVersion: '2016-04-18'
 })
 
@@ -41,11 +37,9 @@ var userpoolId = process.env.AUTH_ECOMMERCEAPPF46BB1ED_USERPOOLID;
 // DynamoDB configuration
 const region = process.env.REGION
 const ddb_table_name = process.env.STORAGE_PRODUCTTABLE_NAME
-const docClient = new AWS.DynamoDB.DocumentClient({region})
+const docClient = new AWS.DynamoDB.DocumentClient({ region })
 
-
-
-// amplify/backend/function/ecommercefunction/src/app.js
+// Helper function to get groups for a user
 async function getGroupsForUser(event) {
   let userSub =
     event
@@ -67,6 +61,7 @@ async function getGroupsForUser(event) {
   return groupData
 }
 
+// Helper function to check if a user can perform an action
 async function canPerformAction(event, group) {
   return new Promise(async (resolve, reject) => {
     if (!event.requestContext.identity.cognitoAuthenticationProvider) {
@@ -82,30 +77,22 @@ async function canPerformAction(event, group) {
   })
 }
 
-
-
-
-
-
-// declare a new express app
+// Declare a new express app
 const app = express()
 app.use(bodyParser.json())
 app.use(awsServerlessExpressMiddleware.eventContext())
 
 // Enable CORS for all methods
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", "*")
   res.header("Access-Control-Allow-Headers", "*")
   next()
 });
 
-
 /**********************
  * Example get method *
  **********************/
-
-// amplify/backend/function/ecommercefunction/src/app.js
-app.get('/products', async function(req, res) {
+app.get('/products', async function (req, res) {
   try {
     const data = await getItems()
     res.json({ data: data })
@@ -114,7 +101,8 @@ app.get('/products', async function(req, res) {
   }
 })
 
-async function getItems(){
+// Helper function to get all items from the DynamoDB table
+async function getItems() {
   var params = { TableName: ddb_table_name }
   try {
     const data = await docClient.scan(params).promise()
@@ -124,19 +112,15 @@ async function getItems(){
   }
 }
 
-
-
-app.get('/products/*', function(req, res) {
+app.get('/products/*', function (req, res) {
   // Add your code here
-  res.json({success: 'get call succeed!', url: req.url});
+  res.json({ success: 'get call succeed!', url: req.url });
 });
 
 /****************************
-* Example post method *
-****************************/
-
-// amplify/backend/function/ecommercefunction/src/app.js
-app.post('/products', async function(req, res) {
+ * Example post method *
+ ****************************/
+app.post('/products', async function (req, res) {
   const { body } = req
   const { event } = req.apiGateway
   try {
@@ -153,39 +137,56 @@ app.post('/products', async function(req, res) {
   }
 });
 
+// Add a "like" endpoint for users to like a product
+app.post('/products/:id/like', async function (req, res) {
+  const { id } = req.params;
+  try {
+    // Update the "likes" count in the DynamoDB table
+    var params = {
+      TableName: ddb_table_name,
+      Key: { id },
+      UpdateExpression: 'SET likes = if_not_exists(likes, :start) + :inc',
+      ExpressionAttributeValues: {
+        ':start': 0, // Initialize likes to 0 if it doesn't exist
+        ':inc': 1,   // Increment likes by 1
+      },
+      ReturnValues: 'UPDATED_NEW',
+    };
 
+    const result = await docClient.update(params).promise();
+    res.json({ success: 'Like added', data: result.Attributes });
+  } catch (err) {
+    res.json({ error: 'Error adding like', details: err });
+  }
+});
 
-
-app.post('/products/*', function(req, res) {
+app.post('/products/*', function (req, res) {
   // Add your code here
-  res.json({success: 'post call succeed!', url: req.url, body: req.body})
+  res.json({ success: 'post call succeed!', url: req.url, body: req.body })
 });
 
 /****************************
-* Example put method *
-****************************/
-
-app.put('/products', function(req, res) {
+ * Example put method *
+ ****************************/
+app.put('/products', function (req, res) {
   // Add your code here
-  res.json({success: 'put call succeed!', url: req.url, body: req.body})
+  res.json({ success: 'put call succeed!', url: req.url, body: req.body })
 });
 
-app.put('/products/*', function(req, res) {
+app.put('/products/*', function (req, res) {
   // Add your code here
-  res.json({success: 'put call succeed!', url: req.url, body: req.body})
+  res.json({ success: 'put call succeed!', url: req.url, body: req.body })
 });
 
 /****************************
-* Example delete method *
-****************************/
-
-// amplify/backend/function/ecommercefunction/src/app.js
-app.delete('/products/:id', async function(req, res) {
+ * Example delete method *
+ ****************************/
+app.delete('/products/:id', async function (req, res) {
   const { event } = req.apiGateway
   try {
     await canPerformAction(event, 'Admin')
     var params = {
-      TableName : ddb_table_name,
+      TableName: ddb_table_name,
       Key: { id: req.params.id }
     }
     await docClient.delete(params).promise()
@@ -195,18 +196,18 @@ app.delete('/products/:id', async function(req, res) {
   }
 });
 
-
-
-app.delete('/products/*', function(req, res) {
+app.delete('/products/*', function (req, res) {
   // Add your code here
-  res.json({success: 'delete call succeed!', url: req.url});
+  res.json({ success: 'delete call succeed!', url: req.url });
 });
 
-app.listen(3000, function() {
-    console.log("App started")
+app.listen(3000, function () {
+  console.log("App started")
 });
 
 // Export the app object. When executing the application local this does nothing. However,
 // to port it to AWS Lambda we will create a wrapper around that will load the app from
 // this file
 module.exports = app
+
+

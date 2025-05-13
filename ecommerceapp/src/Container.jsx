@@ -8,7 +8,8 @@ export default function Container({ children }) {
 }
 
 const containerStyle = {
-  width: 900,
+  width: '100vw',
   margin: '0 auto',
-  padding: '20px 0px'
+  padding: '1em',
+  background: '#eee',
 }

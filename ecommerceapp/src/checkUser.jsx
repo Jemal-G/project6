@@ -11,10 +11,12 @@ async function checkUser(updateUser) {
         }
 
         const {
-        idToken: { payload },
-        } = userData.tokens;
+        accessToken: { payload }} = userData.token;
+        console.log("payload: ", payload);
+        
         const isAuthorized =
-        payload["cognito:groups"] && payload["cognito:groups"].includes("Admin");
+        payload["cognito:groups"] && 
+        payload["cognito:groups"].includes("Admin");
         updateUser({
         username: payload["cognito:username"],
         isAuthorized,

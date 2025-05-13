@@ -1,67 +1,99 @@
-/* src/Main.js */
-import { useState, useEffect } from 'react'
-import Container from './Container'
-import { get , del  } from 'aws-amplify/api'
-import { List } from 'antd'
-import checkUser from './checkUser'
+import { useState, useEffect } from 'react';
+import Container from './Container';
+import { get, del, post } from 'aws-amplify/api';
+import { List, Button, message } from 'antd';
 
-function Main() {
-  const [state, setState] = useState({products: [], loading: true})
-  const [user, updateUser] = useState({})
-  //let didCancel = false
+function Home() {
+  const [state, setState] = useState({ products: [], loading: true });
+
   useEffect(() => {
-    getProducts()
-    checkUser(updateUser)
-    //return () => didCancel = true
-  }, [])
-  async function getProducts() {
-    const request = await get({
-        apiName:'ecommerceapi',
-        path: '/products'
-    });
+    fetchProducts();
+  }, []);
 
-    const { body } = await request.response;
-    const data = await body.json();
-    console.log('data: ', data)
-    //if (didCancel) return
-    setState({
-      products: data.data.Items, loading: false
-    })
-  }
-  async function deleteItem(id) {
+  // Fetch products from the backend
+  async function fetchProducts() {
     try {
-      const products = state.products.filter(p => p.id !== id)
-      await del({
-        apiName: 'ecommerceapi',
-        path: `/products/${id}`
-    });
-      setState({ ...state, products })
-      console.log('successfully deleted item')
+      const request = await get({
+        apiName: 'ecommerceapi', // Ensure this matches the API name in aws-exports.js
+        path: '/products',
+      });
+
+      const { body } = await request.response;
+      const data = await body.json();
+      setState({
+        products: data.data.Items,
+        loading: false,
+      });
     } catch (err) {
-      console.log('error: ', err)
+      console.error('Error fetching products:', err);
+      message.error('Failed to fetch products.');
     }
   }
+
+  // Delete a product
+  async function deleteItem(id) {
+    try {
+      await del({
+        apiName: 'ecommerceapi', // Ensure this matches the API name in aws-exports.js
+        path: `/products/${id}`,
+      });
+      message.success('Product deleted successfully!');
+      fetchProducts(); // Refresh the product list
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      message.error('Failed to delete product.');
+    }
+  }
+
+  // Like a product
+  async function likeItem(id) {
+    try {
+      await post({
+        apiName: 'ecommerceapi', // Ensure this matches the API name in aws-exports.js
+        path: `/products/${id}/like`,
+      });
+      message.success('Product liked!');
+      fetchProducts(); // Refresh the product list
+    } catch (err) {
+      console.error('Error liking product:', err);
+      message.error('Failed to like product.');
+    }
+  }
+
   return (
     <Container>
       <List
         itemLayout="horizontal"
         dataSource={state.products}
         loading={state.loading}
-        renderItem={item => (
+        renderItem={(item) => (
           <List.Item
-            actions={user.isAuthorized ?
-              [<p onClick={() => deleteItem(item.id)}
-                  key={item.id}>delete</p>] : null}
+            actions={[
+              <Button
+                type="default"
+                onClick={() => likeItem(item.id)}
+                key={`like-${item.id}`}
+              >
+                Like ({item.likes || 0})
+              </Button>,
+              <Button
+                type="danger"
+                onClick={() => deleteItem(item.id)}
+                key={`delete-${item.id}`}
+              >
+                Delete
+              </Button>,
+            ]}
           >
             <List.Item.Meta
               title={item.name}
-              description={item.price}
+              description={`$${item.price}`}
             />
           </List.Item>
         )}
       />
     </Container>
-  )
+  );
 }
 
-export default Main
+export default Home;
